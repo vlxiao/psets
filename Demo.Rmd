@@ -21,6 +21,72 @@ library(knitr)
 
 #Data
 ```{r}
+d = expand.grid(name = c("mike", "alison", "madeline"),
+                condition = c("boring","interesting"))
 
+d %>% mutate(index = 1:n())
+
+d %>% 
+  group_by(name) %>%
+  mutate(index = 1:n()) %>%
+  summarize(mean = mean(index))
+
+d %>%
+  group_by(condition) %>%
+  mutate(index = 1:n()) %>%
+  summarize(mean = mean(index))
+```
+
+
+#iris dataset
+```{r}
+head(iris)
+unique(iris$Species)
+hist(iris$Sepal.Length)
+
+qplot(Sepal.Width, data=iris)
+qplot(Sepal.Width, data=iris, binwidth = .2)
+
+tidy_iris = iris %>%
+  mutate(iris_id = 1:n()) %>%
+  gather(measure_name, centimeters,
+         Sepal.Length, Sepal.Width,
+         Petal.Length, Petal.Width) %>%
+  separate(measure_name,
+           into = c("feature", "dimension"),
+           sep = "\\.")
+
+tidy_iris %>% 
+  spread(feature, centimeters) %>%
+  head %>%
+  kable
+
+tidy_iris %>%
+  spread(dimension, centimeters) %>%
+  mutate(area = Length * Width) %>%
+  head %>%
+  kable
+
+qplot(centimeters, fill = Species,
+       facets = dimension ~ feature,
+       data = tidy_iris)
+
+
+tidy_iris %>%
+  filter(feature == "Petal",
+         dimension == "Width") %>%
+  group_by(Species) %>%
+  summarise(mean = mean(centimeters))
+
+iris %>%
+  group_by(Species) %>%
+  summarise(area = mean(Petal.Length * Petal.Width))
+
+tidy_iris %>%
+  filter(feature == "Petal") %>%
+  group_by(Species, iris_id) %>%
+  summarise(area = centimeters[dimension == "Width"] * centimeters[dimension == "Length"]) %>%
+  group_by(Species) %>%
+  summarise(mean(area))
 ```
 
