@@ -15,9 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 #load packages needed for this assignment
-library(tidyr)
-library(plyr)
-library(dplyr)
+library(tidyverse)
 ```
 
 
@@ -32,8 +30,20 @@ Can't use data from this because a) it has a lot of extraneous info that we need
 d = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_cleaned.csv")
 str(d)
 
-d.tidy = select(d, WorkerId, WorkTimeInSeconds:Answer.sushi_cost)
-d.tidy %>%
-  rename(d.tidy, work_time = WorkTimeInSeconds, condition = Input.condition, price1 = Input.price1, price2 = Input.price2) #error???????
+d.tidy = select(d, WorkerId, WorkTimeInSeconds,Input.condition, Answer.dog_cost:Answer.sushi_cost)
+d.tidy = rename(d.tidy, Seconds=WorkTimeInSeconds)
+d.tidy = d.tidy %>%
+  rename(condition=Input.condition) %>%
+  rename(dog=Answer.dog_cost) %>%
+  rename(plasma=Answer.plasma_cost) %>%
+  rename(sushi=Answer.sushi_cost)%>%
+  mutate(WorkerId=1:n())
+
+d.tidy = d.tidy %>%
+  gather(item, cost,
+         dog, plasma, sushi)
+
+d.wide = d.tidy %>%
+  spread(item, cost)
 ```
 
