@@ -1,0 +1,39 @@
+---
+title: "PSET 1"
+author: "Vivian Xiao"
+date: "1/27/2017"
+output: 
+  html_document:
+    highlight: pygments
+    theme: flatly
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#load packages needed for this assignment
+library(tidyr)
+library(plyr)
+library(dplyr)
+```
+
+
+#Data cleaning
+```{r}
+d = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_exercise.csv")
+str(d)
+```
+Can't use data from this because a) it has a lot of extraneous info that we need to clean out first and b) it's in wide format (i.e. multiple observations per participant) and we need long format and c) any potential empty cells, etc. haven't been cleaned out.
+
+```{r}
+d = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_cleaned.csv")
+str(d)
+
+d.tidy = select(d, WorkerId, WorkTimeInSeconds:Answer.sushi_cost)
+d.tidy %>%
+  rename(d.tidy, work_time = WorkTimeInSeconds, condition = Input.condition, price1 = Input.price1, price2 = Input.price2) #error???????
+```
+
