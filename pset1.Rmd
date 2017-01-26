@@ -19,21 +19,25 @@ library(tidyverse)
 ```
 
 
-#Data cleaning
+#Part 1: Data cleaning
+First, we look at the raw data. 
 ```{r}
 d = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_exercise.csv")
 str(d)
 ```
 Can't use data from this because a) it has a lot of extraneous info that we need to clean out first and b) it's in wide format (i.e. multiple observations per participant) and we need long format and c) any potential empty cells, etc. haven't been cleaned out.
 
+#Part 2: Making data tidy
 ```{r}
 d = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_cleaned.csv")
 str(d)
 
-d.tidy = select(d, WorkerId, WorkTimeInSeconds,Input.condition, Answer.dog_cost:Answer.sushi_cost)
-d.tidy = rename(d.tidy, Seconds=WorkTimeInSeconds)
-d.tidy = d.tidy %>%
+d.tidy = select(d, WorkerId, Input.condition:Input.price3, Answer.dog_cost:Answer.sushi_cost)
+d.tidy = d %>%
   rename(condition=Input.condition) %>%
+  rename(dog_a=Input.price1) %>%
+  rename(plasma_a=Input.price2) %>%
+  rename(sushi_a=Input.price3)%>%
   rename(dog=Answer.dog_cost) %>%
   rename(plasma=Answer.plasma_cost) %>%
   rename(sushi=Answer.sushi_cost)%>%
@@ -45,5 +49,68 @@ d.tidy = d.tidy %>%
 
 d.wide = d.tidy %>%
   spread(item, cost)
+```
+
+
+#Part 3: Manipulating data using dplyr
+```{r}
+ggplot(d.tidy, aes(x=condition, y=cost, fill=condition)) +
+     facet_wrap(~item, scales="free") +
+     geom_bar(stat="identity")
+```
+It seems like the condition has an effect! consistent across items 
+
+```{r}
+d.raw = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_exercise.csv",stringsAsFactors = F)
+d.unique.subs = (d.raw %>% 
+                   group_by(WorkerId) %>% 
+                   filter(row_number() == 1))
+
+m_grand = d.unique.subs %>% 
+  group_by(Input.condition) %>% 
+  summarise(m_dog = mean(as.numeric(Answer.dog_cost), na.rm = TRUE), m_plasma = mean(as.numeric(Answer.plasma_cost), na.rm = TRUE), m_sushi = mean(as.numeric(Answer.sushi_cost), na.rm = TRUE))
+m_grand
+
+d.tidy <- d %>% 
+  select(WorkerId, Input.condition, 
+         starts_with("Answer"), 
+         starts_with("Input")) %>%
+  rename(workerid = WorkerId,
+         condition = Input.condition,          
+         plasma_anchor = Input.price1,
+         dog_anchor = Input.price2,
+         sushi_anchor = Input.price3,
+         dog_cost = Answer.dog_cost,
+         plasma_cost = Answer.plasma_cost, 
+         sushi_cost = Answer.sushi_cost) %>%
+  gather(name, cost, 
+         dog_anchor, plasma_anchor, sushi_anchor, 
+         dog_cost, plasma_cost, sushi_cost) %>%
+  separate(name, c("item", "type"), "_") %>%
+  spread(type, cost)
+
+ps = d.tidy %>%
+  mutate(p_change = ((anchor-cost)/anchor)*100) #percent change
+
+p_table = ps %>%
+  group_by(condition) %>%
+  summarise(m_dog = mean(p_change[item == "dog"], na.rm=T), m_plasma = mean(p_change[item=="plasma"],na.rm=T), m_sushi=mean(p_change[item=="sushi"],na.rm=T))
+p_table
+
+ps1 = d.tidy %>%
+  mutate(z=scale(cost)[,1]) #z score
+
+p_table2 = ps1 %>%
+  group_by(condition) %>%
+  summarise(m_dog = mean(z[item == "dog"],na.rm=T), m_plasma = mean(z[item=="plasma"],na.rm=T), m_sushi=mean(z[item=="sushi"],na.rm=T))
+p_table2
+
+ggplot(ps, aes(x=condition, y=p_change, fill=condition)) +
+     facet_wrap(~item, scales="free") +
+     geom_bar(stat="identity")
+
+ggplot(ps1, aes(x=condition, y=z, fill=condition)) +
+     facet_wrap(~item, scales="free") +
+     geom_bar(stat="identity")
 ```
 
