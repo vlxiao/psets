@@ -25,41 +25,44 @@ First, we look at the raw data.
 d = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_exercise.csv")
 str(d)
 ```
-Can't use data from this because a) it has a lot of extraneous info that we need to clean out first and b) it's in wide format (i.e. multiple observations per participant) and we need long format and c) any potential empty cells, etc. haven't been cleaned out.
+In this format, the data is probably going to be difficult or unwieldy to work with. This is because  a) it has a lot of extraneous info that we need to clean out first (i.e. information Qualtrics automatically gives you that isn't necessarily pertinent) and b) it's in wide format (i.e. multiple observations per participant per row) and we need long format and c) any potential empty cells, or duplications haven't been cleaned out.
 
 #Part 2: Making data tidy
+Next, we take a look at the cleaned dataset. 
 ```{r}
 d = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_cleaned.csv")
 str(d)
 
 d.tidy = select(d, WorkerId, Input.condition:Input.price3, Answer.dog_cost:Answer.sushi_cost)
-d.tidy = d %>%
+d.tidy = d.tidy %>%
   rename(condition=Input.condition) %>%
-  rename(dog_a=Input.price1) %>%
-  rename(plasma_a=Input.price2) %>%
-  rename(sushi_a=Input.price3)%>%
-  rename(dog=Answer.dog_cost) %>%
-  rename(plasma=Answer.plasma_cost) %>%
-  rename(sushi=Answer.sushi_cost)%>%
+  rename(dog_anchor=Input.price1) %>%
+  rename(plasma_anchor=Input.price2) %>%
+  rename(sushi_anchor=Input.price3)%>%
+  rename(dog_cost=Answer.dog_cost) %>%
+  rename(plasma_cost=Answer.plasma_cost) %>%
+  rename(sushi_cost=Answer.sushi_cost)%>%
   mutate(WorkerId=1:n())
 
 d.tidy = d.tidy %>%
-  gather(item, cost,
-         dog, plasma, sushi)
-
-d.wide = d.tidy %>%
-  spread(item, cost)
+  gather(name, cost,
+         dog_anchor, plasma_anchor, sushi_anchor,
+         dog_cost, plasma_cost, sushi_cost) %>%
+  separate(name, c("item", "type"), "_") %>%
+  spread(type, cost)
 ```
-
+We select only the variables of interest (subject ID, anchoring condition, anchoring price, and participant's bet), and then we rename the variables into something more easily understood. Finally, we convert the data from wide format to long format for ease of analysis. This is the form that is most convenient to run analyses in.
 
 #Part 3: Manipulating data using dplyr
+Using the cleaned dataset from **Part 2** above, we plot the data to see, visually, whether or not it looks like the effect replicated. 
 ```{r}
-ggplot(d.tidy, aes(x=condition, y=cost, fill=condition)) +
-     facet_wrap(~item, scales="free") +
-     geom_bar(stat="identity")
+ggplot(d.tidy, aes(x=item, y=cost, group=condition,fill=condition)) +
+     geom_bar(stat="identity", position="dodge")
 ```
-It seems like the condition has an effect! consistent across items 
 
+This graph is pretty difficult to interpret because the three items are on different scales. If we clean the data some more to get standardized outcome variables, we may be able to more easily compare the three types of items and the responses that participants gave for them. 
+
+Here, we go through the process of manipulating the data to more easily compare the mean price given for each item in each condition. 
 ```{r}
 d.raw = read.csv("~/Desktop/PSYC254/data/problem_sets/data/janiszewski_rep_exercise.csv",stringsAsFactors = F)
 d.unique.subs = (d.raw %>% 
@@ -69,8 +72,12 @@ d.unique.subs = (d.raw %>%
 m_grand = d.unique.subs %>% 
   group_by(Input.condition) %>% 
   summarise(m_dog = mean(as.numeric(Answer.dog_cost), na.rm = TRUE), m_plasma = mean(as.numeric(Answer.plasma_cost), na.rm = TRUE), m_sushi = mean(as.numeric(Answer.sushi_cost), na.rm = TRUE))
-m_grand
+print(m_grand)
+```
+First, we ensure that the data we look at is only data for unique participants, removing any duplicates. Then, we calculate the mean price that participants reported for each item type in a table. We can see that the predicted effect seems to replicate for plasma and sushi (i.e. those in the `over` condition gave higher prices than those in the `rounded` condition, who in turn gave higher prices than those in the `under` condition), but not dogs. For the dogs, we can see that the average price in the over and rounded conditions is approximately comparable, but the price in the under condition is far larger - directly contrary to the predicted effect. This suggests that the replication may not be entirely successful.
 
+In order to better examine this suspicion, we then clean the data further and standardize the responses against the anchor values in two ways.
+```{r}
 d.tidy <- d %>% 
   select(WorkerId, Input.condition, 
          starts_with("Answer"), 
@@ -88,29 +95,47 @@ d.tidy <- d %>%
          dog_cost, plasma_cost, sushi_cost) %>%
   separate(name, c("item", "type"), "_") %>%
   spread(type, cost)
+```
 
+First, we standardize using percent change. 
+```{r}
 ps = d.tidy %>%
-  mutate(p_change = ((anchor-cost)/anchor)*100) #percent change
+  mutate(p_change = ((anchor-cost)/anchor)*100) #percent change (decrease)
 
 p_table = ps %>%
   group_by(condition) %>%
   summarise(m_dog = mean(p_change[item == "dog"], na.rm=T), m_plasma = mean(p_change[item=="plasma"],na.rm=T), m_sushi=mean(p_change[item=="sushi"],na.rm=T))
-p_table
+print(p_table)
+```
+When calculating the percent change (here, percent decrease from the anchor price), we see that alghough the percent decrease seems to get larger for plasma (the expected effect), the same is not true for dogs and sushi, both of which have smaller percent decrease for the under condition, contrary to expectations. 
 
+Next, we examine what results look like when we examine cost as a z-score.
+```{r}
 ps1 = d.tidy %>%
   mutate(z=scale(cost)[,1]) #z score
 
 p_table2 = ps1 %>%
   group_by(condition) %>%
   summarise(m_dog = mean(z[item == "dog"],na.rm=T), m_plasma = mean(z[item=="plasma"],na.rm=T), m_sushi=mean(z[item=="sushi"],na.rm=T))
-p_table2
+print(p_table2)
+```
+As z-scores, we see again that the effect does not appear to hold. For both sushi and dogs, there doesn't appear to be a big, appreciable change in cost based on condition, and again, for dogs, the cost in the under condition seems to be larger than the other two (though not by  much). Again, the plasma condition does show the expected effect - the z scores get smaller when comparing over to rounded to under. 
 
-ggplot(ps, aes(x=condition, y=p_change, fill=condition)) +
-     facet_wrap(~item, scales="free") +
-     geom_bar(stat="identity")
+Finally, we graph the standardized data to again visualize the results, but this time with more intepretable information.
+```{r}
+ps.a = ps %>%
+  group_by(item, condition) %>%
+  summarise(means=mean(p_change, na.rm=T))
 
-ggplot(ps1, aes(x=condition, y=z, fill=condition)) +
-     facet_wrap(~item, scales="free") +
-     geom_bar(stat="identity")
+ggplot(ps.a, aes(x=item, y=means, group=condition,fill=condition)) +
+     geom_bar(stat="identity", position="dodge")
+
+ps1.a = ps1 %>%
+  group_by(item, condition) %>%
+  summarise(means=mean(z, na.rm=T))
+
+ggplot(ps1.a, aes(x=item, y=means, group=condition,fill=condition)) +
+     geom_bar(stat="identity", position="dodge")
 ```
 
+In both cases, when standardized, the effect does not seem to replicate perfectly. Although plasma shows effects in the expected direction when using both methods of standardization, the effect for dogs and sushi is not what we expected. Whereas it was unclear with the unstandardized scores whether or not the effect replicated because of the different scales the three different items had, when standardized it is clear that the replication is not perfect.
