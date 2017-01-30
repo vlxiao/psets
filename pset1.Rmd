@@ -73,10 +73,15 @@ m_grand = d.unique.subs %>%
   group_by(Input.condition) %>% 
   summarise(m_dog = mean(as.numeric(Answer.dog_cost), na.rm = TRUE), m_plasma = mean(as.numeric(Answer.plasma_cost), na.rm = TRUE), m_sushi = mean(as.numeric(Answer.sushi_cost), na.rm = TRUE))
 print(m_grand)
-```
-First, we ensure that the data we look at is only data for unique participants, removing any duplicates. Then, we calculate the mean price that participants reported for each item type in a table. We can see that the predicted effect seems to replicate for plasma and sushi (i.e. those in the `over` condition gave higher prices than those in the `rounded` condition, who in turn gave higher prices than those in the `under` condition), but not dogs. For the dogs, we can see that the average price in the over and rounded conditions is approximately comparable, but the price in the under condition is far larger - directly contrary to the predicted effect. This suggests that the replication may not be entirely successful.
 
-In order to better examine this suspicion, we then clean the data further and standardize the responses against the anchor values in two ways.
+m_grand2 = d.tidy %>%
+  group_by(condition) %>%
+  summarize(mean(cost, na.rm=TRUE))
+print(m_grand2)
+```
+First, we ensure that the data we look at is only data for unique participants, removing any duplicates. Then, we calculate the mean price that participants reported for each item type in a table. We can see that the predicted effect seems to replicate for plasma and sushi (i.e. those in the `over` condition gave higher prices than those in the `rounded` condition, who in turn gave higher prices than those in the `under` condition), but not dogs. For the dogs, we can see that the average price in the over and rounded conditions is approximately comparable, but the price in the under condition is far larger - directly contrary to the predicted effect. This suggests that the replication may not be entirely successful. However, when we look at the prices overall across items, we see that the effect seems to replicate. However, since the three items use wildly different scales, this may confound what we see when we look at the raw data. 
+
+In order to better examine this effect, we then clean the data further and standardize the responses against the anchor values in two ways.
 ```{r}
 d.tidy <- d %>% 
   select(WorkerId, Input.condition, 
@@ -106,8 +111,13 @@ p_table = ps %>%
   group_by(condition) %>%
   summarise(m_dog = mean(p_change[item == "dog"], na.rm=T), m_plasma = mean(p_change[item=="plasma"],na.rm=T), m_sushi=mean(p_change[item=="sushi"],na.rm=T))
 print(p_table)
+
+p_table.a = ps %>%
+  group_by(condition) %>%
+  summarize(mean(p_change, na.rm=T))
+print(p_table.a)
 ```
-When calculating the percent change (here, percent decrease from the anchor price), we see that alghough the percent decrease seems to get larger for plasma (the expected effect), the same is not true for dogs and sushi, both of which have smaller percent decrease for the under condition, contrary to expectations. 
+When calculating the percent change (here, percent decrease from the anchor price), we see that alghough the percent decrease seems to get larger for plasma (the expected effect), the same is not true for dogs and sushi, both of which have smaller percent decrease for the under condition, contrary to expectations. Further, overall, when looking at the percent decrease across items, we find that the under condition produces the smallest percent decrease, suggesting that the effect doesn't cleanly replicate. 
 
 Next, we examine what results look like when we examine cost as a z-score.
 ```{r}
@@ -118,8 +128,13 @@ p_table2 = ps1 %>%
   group_by(condition) %>%
   summarise(m_dog = mean(z[item == "dog"],na.rm=T), m_plasma = mean(z[item=="plasma"],na.rm=T), m_sushi=mean(z[item=="sushi"],na.rm=T))
 print(p_table2)
+
+p_table2.a = ps1 %>%
+  group_by(condition) %>%
+  summarize(mean(z, na.rm=T))
+print(p_table2.a)
 ```
-As z-scores, we see again that the effect does not appear to hold. For both sushi and dogs, there doesn't appear to be a big, appreciable change in cost based on condition, and again, for dogs, the cost in the under condition seems to be larger than the other two (though not by  much). Again, the plasma condition does show the expected effect - the z scores get smaller when comparing over to rounded to under. 
+As z-scores, we see again that the effect does not appear to hold. For both sushi and dogs, there doesn't appear to be a big, appreciable change in cost based on condition, and again, for dogs, the over and rounded conditions don't seem to be appreciably different. Again, the plasma condition does show the expected effect - the z scores get smaller when comparing over to rounded to under. When looking at the results across items, it does look like the results point to the effect holding, but the differences between the three conditions are so small that we can't be confident in this. 
 
 Finally, we graph the standardized data to again visualize the results, but this time with more intepretable information.
 ```{r}

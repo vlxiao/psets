@@ -315,8 +315,18 @@ m_grand =<span class="st"> </span>d.unique.subs %&gt;%<span class="st"> </span>
 ## 1            over 1894.793 4300.333 8.342857
 ## 2         rounded 1884.482 4094.929 7.953929
 ## 3           under 1959.074 3857.659 7.742500</code></pre>
-<p>First, we ensure that the data we look at is only data for unique participants, removing any duplicates. Then, we calculate the mean price that participants reported for each item type in a table. We can see that the predicted effect seems to replicate for plasma and sushi (i.e. those in the <code>over</code> condition gave higher prices than those in the <code>rounded</code> condition, who in turn gave higher prices than those in the <code>under</code> condition), but not dogs. For the dogs, we can see that the average price in the over and rounded conditions is approximately comparable, but the price in the under condition is far larger - directly contrary to the predicted effect. This suggests that the replication may not be entirely successful.</p>
-<p>In order to better examine this suspicion, we then clean the data further and standardize the responses against the anchor values in two ways.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">m_grand2 =<span class="st"> </span>d.tidy %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(condition) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="kw">mean</span>(cost, <span class="dt">na.rm=</span><span class="ot">TRUE</span>))
+<span class="kw">print</span>(m_grand2)</code></pre></div>
+<pre><code>## # A tibble: 3 × 2
+##   condition `mean(cost, na.rm = TRUE)`
+##      &lt;fctr&gt;                      &lt;dbl&gt;
+## 1      over                   2092.139
+## 2   rounded                   1994.698
+## 3     under                   1977.688</code></pre>
+<p>First, we ensure that the data we look at is only data for unique participants, removing any duplicates. Then, we calculate the mean price that participants reported for each item type in a table. We can see that the predicted effect seems to replicate for plasma and sushi (i.e. those in the <code>over</code> condition gave higher prices than those in the <code>rounded</code> condition, who in turn gave higher prices than those in the <code>under</code> condition), but not dogs. For the dogs, we can see that the average price in the over and rounded conditions is approximately comparable, but the price in the under condition is far larger - directly contrary to the predicted effect. This suggests that the replication may not be entirely successful. However, when we look at the prices overall across items, we see that the effect seems to replicate. However, since the three items use wildly different scales, this may confound what we see when we look at the raw data.</p>
+<p>In order to better examine this effect, we then clean the data further and standardize the responses against the anchor values in two ways.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">d.tidy &lt;-<span class="st"> </span>d %&gt;%<span class="st"> </span>
 <span class="st">  </span><span class="kw">select</span>(WorkerId, Input.condition, 
          <span class="kw">starts_with</span>(<span class="st">&quot;Answer&quot;</span>), 
@@ -348,7 +358,17 @@ p_table =<span class="st"> </span>ps %&gt;%
 ## 1      over 24.31021 14.19926 11.08532
 ## 2   rounded 24.62070 18.16690 11.60536
 ## 3     under 23.47655 19.43951 10.38773</code></pre>
-<p>When calculating the percent change (here, percent decrease from the anchor price), we see that alghough the percent decrease seems to get larger for plasma (the expected effect), the same is not true for dogs and sushi, both of which have smaller percent decrease for the under condition, contrary to expectations.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">p_table.a =<span class="st"> </span>ps %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(condition) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="kw">mean</span>(p_change, <span class="dt">na.rm=</span>T))
+<span class="kw">print</span>(p_table.a)</code></pre></div>
+<pre><code>## # A tibble: 3 × 2
+##   condition `mean(p_change, na.rm = T)`
+##      &lt;fctr&gt;                       &lt;dbl&gt;
+## 1      over                    16.59279
+## 2   rounded                    18.13099
+## 3     under                    17.76793</code></pre>
+<p>When calculating the percent change (here, percent decrease from the anchor price), we see that alghough the percent decrease seems to get larger for plasma (the expected effect), the same is not true for dogs and sushi, both of which have smaller percent decrease for the under condition, contrary to expectations. Further, overall, when looking at the percent decrease across items, we find that the under condition produces the smallest percent decrease, suggesting that the effect doesn’t cleanly replicate.</p>
 <p>Next, we examine what results look like when we examine cost as a z-score.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">ps1 =<span class="st"> </span>d.tidy %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">z=</span><span class="kw">scale</span>(cost)[,<span class="dv">1</span>]) <span class="co">#z score</span>
@@ -363,7 +383,17 @@ p_table2 =<span class="st"> </span>ps1 %&gt;%
 ## 1      over -0.07003565 1.283835 -1.135294
 ## 2   rounded -0.07782373 1.166217 -1.135501
 ## 3     under -0.06515216 1.124903 -1.135621</code></pre>
-<p>As z-scores, we see again that the effect does not appear to hold. For both sushi and dogs, there doesn’t appear to be a big, appreciable change in cost based on condition, and again, for dogs, the cost in the under condition seems to be larger than the other two (though not by much). Again, the plasma condition does show the expected effect - the z scores get smaller when comparing over to rounded to under.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">p_table2.a =<span class="st"> </span>ps1 %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(condition) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="kw">mean</span>(z, <span class="dt">na.rm=</span>T))
+<span class="kw">print</span>(p_table2.a)</code></pre></div>
+<pre><code>## # A tibble: 3 × 2
+##   condition `mean(z, na.rm = T)`
+##      &lt;fctr&gt;                &lt;dbl&gt;
+## 1      over           0.03921865
+## 2   rounded          -0.01570251
+## 3     under          -0.02528979</code></pre>
+<p>As z-scores, we see again that the effect does not appear to hold. For both sushi and dogs, there doesn’t appear to be a big, appreciable change in cost based on condition, and again, for dogs, the over and rounded conditions don’t seem to be appreciably different. Again, the plasma condition does show the expected effect - the z scores get smaller when comparing over to rounded to under. When looking at the results across items, it does look like the results point to the effect holding, but the differences between the three conditions are so small that we can’t be confident in this.</p>
 <p>Finally, we graph the standardized data to again visualize the results, but this time with more intepretable information.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">ps.a =<span class="st"> </span>ps %&gt;%
 <span class="st">  </span><span class="kw">group_by</span>(item, condition) %&gt;%
